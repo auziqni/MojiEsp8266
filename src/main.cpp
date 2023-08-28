@@ -76,6 +76,17 @@ void getDataSensor()
         humidity = dht.getHumidity();
         temperature = dht.getTemperature();
         dhtReady = true;
+
+        if (temperature > 40)
+        {
+            for (size_t i = 0; i < 3; i++)
+            {
+                digitalWrite(buzzer, HIGH);
+                delay(1000);
+                digitalWrite(buzzer, LOW);
+                delay(1000);
+            }
+        }
     }
 }
 
@@ -108,13 +119,13 @@ void buzzering()
     lcd.print("Jarak:  ");
     lcd.setCursor(6, 1);
     lcd.print(distToAdmin);
-    for (size_t i = 0; i < 3; i++)
-    {
-        digitalWrite(buzzer, HIGH);
-        delay(1000);
-        digitalWrite(buzzer, LOW);
-        delay(1000);
-    }
+    // for (size_t i = 0; i < 3; i++)
+    // {
+    //     digitalWrite(buzzer, HIGH);
+    //     delay(1000);
+    //     digitalWrite(buzzer, LOW);
+    //     delay(1000);
+    // }
 }
 
 void lcdPrint()
@@ -278,7 +289,7 @@ void pushData(int d_id, float d_lat, float d_lng, float d_temp, float d_humid)
             if (doc["admin"] == "ready")
             {
                 distToAdmin = doc[String("jarak")];
-                if (distToAdmin > 5) // jarak dalam kilo
+                if (distToAdmin > 100) // jarak dalam meter
                 {
                     buzzering();
                 }
