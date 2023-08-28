@@ -11,6 +11,9 @@ static const int Device_Id = 100;
 
 static const int DhtPin = 16;            // D0
 static const int RXPin = 14, TXPin = 12; // D5,D6
+static const int potentioPin = 0;
+static const int buzzer = 2;
+
 static const uint32_t GPSBaud = 9600;
 DHTesp dht;
 TinyGPSPlus gps;
@@ -23,6 +26,7 @@ const uint8_t fingerprint[20] = {0xFF, 0xB9, 0xE3, 0xB5, 0x5B, 0x5C, 0xE6, 0xF4,
 
 float latitude, longitude;
 float temperature, humidity;
+int potenRead = 0, potenReadPrev = 0;
 String jsonReqPayload, responsePayload;
 float distToAdmin;
 
@@ -33,26 +37,40 @@ bool spottedError[5] = {false}; // doc error 0=>wifi; 1=>gps; 2=>dht;
 
 void getDataSensor()
 {
-    while (ss.available() > 0)
-    {
-        byte gpsData = ss.read();
-        Serial.write(gpsData);
+    potenRead = analogRead(potentioPin);
 
-        gps.encode(gpsData);
-        if (gps.location.isValid())
+    if (potenRead > 100)
+    {
+        int diffrence = abs(potenRead - potenReadPrev);
+        if (potenRead > 100 && diffrence > 10)
         {
-            latitude = gps.location.lat();
-            longitude = gps.location.lng();
-            // latitude = 1;
-            // longitude = 1;
-            gpsReady = true;
-            spottedError[1] = false;
-        }
-        else
-        {
-            spottedError[1] = true;
+            latitude = -50 + (potenRead * 120 / 1024);
+            longitude = -60 + (potenRead * 160 / 1024);
+            potenReadPrev = potenRead;
         }
     }
+    else
+    {
+        while (ss.available() > 0)
+        {
+            byte gpsData = ss.read();
+            Serial.write(gpsData);
+
+            gps.encode(gpsData);
+            if (gps.location.isValid())
+            {
+                latitude = gps.location.lat();
+                longitude = gps.location.lng();
+                gpsReady = true;
+                spottedError[1] = false;
+            }
+            else
+            {
+                spottedError[1] = true;
+            }
+        }
+    }
+
     if (nowmillis - lastmillis > dht.getMinimumSamplingPeriod())
     {
         humidity = dht.getHumidity();
@@ -78,13 +96,25 @@ void timer()
     }
 }
 
-void buzzer()
+void buzzering()
 {
-    // TODO BUNYI BUZZER
+    lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("   PERINGATAN!  ");
     lcd.setCursor(0, 1);
     lcd.print("  TERLALU JAUH  ");
+    delay(1000);
+    lcd.setCursor(0, 1);
+    lcd.print("Jarak:  ");
+    lcd.setCursor(6, 1);
+    lcd.print(distToAdmin);
+    for (size_t i = 0; i < 3; i++)
+    {
+        digitalWrite(buzzer, HIGH);
+        delay(1000);
+        digitalWrite(buzzer, LOW);
+        delay(1000);
+    }
 }
 
 void lcdPrint()
@@ -157,13 +187,15 @@ void serialPrint()
         }
         Serial.println("");
 
+        Serial.print(potenRead);
+        Serial.print("\t");
         Serial.print(latitude, 6);
         Serial.print("\t");
         Serial.print(longitude, 6);
         Serial.print("\t");
-        Serial.print(temperature, 1);
+        Serial.print(temperature);
         Serial.print("\t");
-        Serial.println(humidity), 1;
+        Serial.println(humidity);
         Serial.println("");
     }
 }
@@ -246,10 +278,14 @@ void pushData(int d_id, float d_lat, float d_lng, float d_temp, float d_humid)
             if (doc["admin"] == "ready")
             {
                 distToAdmin = doc[String("jarak")];
+                if (distToAdmin > 5) // jarak dalam kilo
+                {
+                    buzzering();
+                }
             }
             else
             {
-                distToAdmin = 0;
+                distToAdmin = -1;
             }
             Serial.print("distToAdmin :");
             Serial.println(distToAdmin);
@@ -273,6 +309,7 @@ void setup()
 
     ss.begin(GPSBaud);
     dht.setup(DhtPin, DHTesp::DHT22);
+    pinMode(buzzer, OUTPUT);
 
     lcd.setCursor(0, 0);
     lcd.print(" SELAMAT DATANG ");
