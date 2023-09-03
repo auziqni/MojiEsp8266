@@ -12,7 +12,7 @@ static const int Device_Id = 100;
 static const int DhtPin = 16;            // D0
 static const int RXPin = 14, TXPin = 12; // D5,D6
 static const int potentioPin = 0;
-static const int buzzer = 2;
+static const int buzzer = 13;
 
 static const uint32_t GPSBaud = 9600;
 DHTesp dht;
