@@ -7,7 +7,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
 
-static const int Device_Id = 100;
+static const int Device_Id = 3;
 
 static const int DhtPin = 16;            // D0
 static const int RXPin = 14, TXPin = 12; // D5,D6
@@ -77,7 +77,7 @@ void getDataSensor()
         temperature = dht.getTemperature();
         dhtReady = true;
 
-        if (temperature > 40)
+        if (temperature > 40 || temperature < 10)
         {
             for (size_t i = 0; i < 3; i++)
             {
